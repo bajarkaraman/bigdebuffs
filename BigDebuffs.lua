@@ -1359,7 +1359,18 @@ end
 local pending = {}
 
 hooksecurefunc("CompactUnitFrame_UpdateAll", function(frame)
-	print("Hello")
+	if not BigDebuffs.db.profile then return end
+	if not BigDebuffs.db.profile.raidFrames then return end
+	if not BigDebuffs.db.profile.raidFrames.enabled then return end
+	if frame:IsForbidden() then return end
+	local name = frame:GetName()
+	if not name or not name:match("^Compact") then return end
+	if InCombatLockdown() and not frame.BigDebuffs then
+		if not pending[frame] then pending[frame] = true end
+--	if not IsInGroup() or GetNumGroupMembers() > 5 then return end
+	else
+		BigDebuffs:AddBigDebuffs(frame)
+	end
 end)
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
