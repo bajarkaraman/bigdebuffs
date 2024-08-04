@@ -520,8 +520,12 @@ local CompactRaidFrameRedirectConfig = {
         GetRedirectFrame = function(unit)
             local partyHeader = _G["CellPartyFrameHeader"]
             local raidHeader = _G["CellRaidFrameHeader1"]
+            local soloFrame = _G["CellSoloFramePlayer"]
 
-            if partyHeader and partyHeader:IsVisible() then
+            if soloFrame and soloFrame:IsVisible() then
+                -- We're solo
+                return _G["CellSoloFramePlayer"]
+            elseif partyHeader and partyHeader:IsVisible() then
                 -- We're in a party
                 for i = 1, 5 do
                     local frame = _G["CellPartyFrameHeaderUnitButton" .. i]
@@ -537,11 +541,8 @@ local CompactRaidFrameRedirectConfig = {
                         return frame
                     end
                 end
-            elseif not IsInGroup() then
-                -- We're solo
-                return _G["CellSoloFramePlayer"]
-            end
 
+            end
             return nil
         end
     }
