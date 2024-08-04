@@ -55,7 +55,8 @@ local defaults = {
             inRaid = {
                 hide = false,
                 size = 5
-            }
+            },
+            redirectDebuffsToAddon = "Blizzard"
         },
         unitFrames = {
             enabled = true,
@@ -511,6 +512,39 @@ local GetAnchor = {
             return
         end
     end,
+}
+
+-- This config is used to redirect the default Blizzard CompactRaidFrame to a custom frame
+local CompactRaidFrameRedirectConfig = {
+    Cell = {
+        GetRedirectFrame = function(unit)
+            local partyHeader = _G["CellPartyFrameHeader"]
+            local raidHeader = _G["CellRaidFrameHeader1"]
+
+            if partyHeader and partyHeader:IsVisible() then
+                -- We're in a party
+                for i = 1, 5 do
+                    local frame = _G["CellPartyFrameHeaderUnitButton" .. i]
+                    if frame and frame:IsVisible() and frame.unit == unit then
+                        return frame
+                    end
+                end
+            elseif raidHeader and raidHeader:IsVisible() then
+                -- We're in a raid
+                for i = 1, 5 do
+                    local frame = _G["CellRaidFrameHeader1UnitButton" .. i]
+                    if frame and frame:IsVisible() and frame.unit == unit then
+                        return frame
+                    end
+                end
+            elseif not IsInGroup() then
+                -- We're solo
+                return _G["CellSoloFramePlayer"]
+            end
+
+            return nil
+        end
+    }
 }
 
 local GetNameplateAnchor = {
@@ -1280,6 +1314,7 @@ function BigDebuffs:UNIT_AURA_ALL_UNITS()
     end
 end
 
+
 BigDebuffs.AttachedFrames = {}
 
 local INCREASED_MAX_BUFFS = 6
@@ -1288,13 +1323,25 @@ function BigDebuffs:AddBigDebuffs(frame)
     if not frame or not frame.displayedUnit or not UnitIsPlayer(frame.displayedUnit) then return end
     local frameName = frame:GetName()
     local buffPrefix = frameName .. "Buff"
+    local redirectDebuffsToAddon = self.db.profile.raidFrames.redirectDebuffsToAddon
+    local redirectToFrame = nil
 
+    if redirectDebuffsToAddon and frameName:match("^Compact") then
+        for redirectAddon, config in pairs(CompactRaidFrameRedirectConfig) do
+            if redirectAddon == redirectDebuffsToAddon then
+                redirectToFrame = config.GetRedirectFrame(frame.unit)
+                if redirectToFrame then
+                    print("Redirecting", frame:GetName(), "to", redirectToFrame:GetName())
+                end
+            end
+        end
+    end
+
+    -- Increase max buffs if needed
     local maxBuffs = self.db.profile.raidFrames.increaseBuffs and INCREASED_MAX_BUFFS or frame.maxBuffs
-
     for i = 1, maxBuffs do
         if i > frame.maxBuffs then
-            local buffFrame = _G[buffPrefix .. i] or
-                CreateFrame("Button", buffPrefix .. i, frame, "CompactBuffTemplate")
+            local buffFrame = _G[buffPrefix .. i] or CreateFrame("Button", buffPrefix .. i, frame, "CompactBuffTemplate")
             buffFrame:ClearAllPoints()
             if math.fmod(i - 1, 3) == 0 then
                 buffFrame:SetPoint("BOTTOMRIGHT", _G[buffPrefix .. i - 3], "TOPRIGHT")
@@ -1313,33 +1360,41 @@ function BigDebuffs:AddBigDebuffs(frame)
         local big = frame.BigDebuffs[i] or
             CreateFrame("Button", frameName .. "BigDebuffsRaid" .. i, frame, "BigDebuffsDebuffTemplate")
         big:ClearAllPoints()
+
+        if redirectToFrame then
+            redirectToFrame.BigDebuffs = frame.BigDebuffs
+            big:SetParent(redirectToFrame)
+        end
+
+        local anchorFrame = redirectToFrame or frame
+
         if i > 1 and i ~= wrapAt + 1 then
-            if self.db.profile.raidFrames.anchor == "INNER" or self.db.profile.raidFrames.anchor == "RIGHT" or self.db.profile.raidFrames.anchor == "TOP" then
-                big:SetPoint("BOTTOMLEFT", frame.BigDebuffs[i - 1], "BOTTOMRIGHT", 0, 0)
+            if (self.db.profile.raidFrames.anchor == "INNER" and redirectDebuffsToAddon == "Blizzard") or self.db.profile.raidFrames.anchor == "RIGHT" or self.db.profile.raidFrames.anchor == "TOP" then
+                big:SetPoint("BOTTOMLEFT", anchorFrame.BigDebuffs[i - 1], "BOTTOMRIGHT", 0, 0)
             elseif self.db.profile.raidFrames.anchor == "LEFT" then
-                big:SetPoint("BOTTOMRIGHT", frame.BigDebuffs[i - 1], "BOTTOMLEFT", 0, 0)
+                big:SetPoint("BOTTOMRIGHT", anchorFrame.BigDebuffs[i - 1], "BOTTOMLEFT", 0, 0)
             elseif self.db.profile.raidFrames.anchor == "BOTTOM" then
-                big:SetPoint("TOPLEFT", frame.BigDebuffs[i - 1], "TOPRIGHT", 0, 0)
+                big:SetPoint("TOPLEFT", anchorFrame.BigDebuffs[i - 1], "TOPRIGHT", 0, 0)
             end
         elseif i == wrapAt + 1 and  wrapAt ~= 0 then
-            if self.db.profile.raidFrames.anchor == "INNER" or self.db.profile.raidFrames.anchor == "RIGHT" or self.db.profile.raidFrames.anchor == "TOP" then
-                big:SetPoint("BOTTOMLEFT", frame.BigDebuffs[1], "TOPLEFT",0, 1)
+            if (self.db.profile.raidFrames.anchor == "INNER" and redirectDebuffsToAddon == "Blizzard") or self.db.profile.raidFrames.anchor == "RIGHT" or self.db.profile.raidFrames.anchor == "TOP" then
+                big:SetPoint("BOTTOMLEFT", anchorFrame.BigDebuffs[1], "TOPLEFT", 0, 1)
             elseif self.db.profile.raidFrames.anchor == "LEFT" then
-                big:SetPoint("BOTTOMRIGHT", frame.BigDebuffs[1], "TOPRIGHT", 0,1)
+                big:SetPoint("BOTTOMRIGHT", anchorFrame.BigDebuffs[1], "TOPRIGHT", 0, 1)
             elseif self.db.profile.raidFrames.anchor == "BOTTOM" then
-                big:SetPoint("TOPLEFT", frame.BigDebuffs[1], "BOTTOMLEFT", 0, -1)
+                big:SetPoint("TOPLEFT", anchorFrame.BigDebuffs[1], "BOTTOMLEFT", 0, -1)
             end
         else
-            if self.db.profile.raidFrames.anchor == "INNER" then
-                big:SetPoint("BOTTOMLEFT", frame.debuffFrames[1], "BOTTOMLEFT", 0, 0)
+            if (self.db.profile.raidFrames.anchor == "INNER" and redirectDebuffsToAddon == "Blizzard") then
+                big:SetPoint("BOTTOMLEFT", anchorFrame.debuffFrames[1], "BOTTOMLEFT", 0, 0)
             elseif self.db.profile.raidFrames.anchor == "LEFT" then
-                big:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", 0, 1)
+                big:SetPoint("BOTTOMRIGHT", anchorFrame, "BOTTOMLEFT", 0, 1)
             elseif self.db.profile.raidFrames.anchor == "RIGHT" then
-                big:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT", 0, 1)
+                big:SetPoint("BOTTOMLEFT", anchorFrame, "BOTTOMRIGHT", 0, 1)
             elseif self.db.profile.raidFrames.anchor == "TOP" then
-                big:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 0, 1)
+                big:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", 0, 1)
             elseif self.db.profile.raidFrames.anchor == "BOTTOM" then
-                big:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 0, 1)
+                big:SetPoint("TOPLEFT", anchorFrame, "BOTTOMLEFT", 0, 1)
             end
         end
 

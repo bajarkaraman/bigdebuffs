@@ -381,13 +381,32 @@ function BigDebuffs:SetupOptions()
                         name = L["Anchor"],
                         desc = L["Anchor to attach the BigDebuffs frames"],
                         type = "select",
-                        values = {
-                            ["INNER"] = L["INNER"],
-                            ["LEFT"] = L["LEFT"],
-                            ["RIGHT"] = L["RIGHT"],
-                            ["TOP"] = L["TOP"],
-                            ["BOTTOM"] = L["BOTTOM"],
-                        },
+                        values = function()
+                            local values = {
+                                ["LEFT"] = L["LEFT"],
+                                ["RIGHT"] = L["RIGHT"],
+                                ["TOP"] = L["TOP"],
+                                ["BOTTOM"] = L["BOTTOM"],
+                            }
+                            local redirectDebuffsToAddon = BigDebuffs.db.profile.raidFrames.redirectDebuffsToAddon
+                            if not redirectDebuffsToAddon or redirectDebuffsToAddon == "Blizzard" then
+                                values["INNER"] = L["INNER"]
+                            end
+
+                            return values
+                        end,
+                        get = function(info)
+                            return BigDebuffs.db.profile.raidFrames.anchor
+                        end,
+                        set = function(info, value)
+                            local redirectDebuffsToAddon = BigDebuffs.db.profile.raidFrames.redirectDebuffsToAddon
+                            if redirectDebuffsToAddon and redirectDebuffsToAddon ~= "Blizzard" and value == "INNER" then
+                                -- If redirecting to a non-Blizzard addon and trying to set INNER, revert to LEFT
+                                print("Warning: INNER anchor is not allowed when redirecting to non-Blizzard frames. Defaulting to RIGHT.")
+                                value = "RIGHT"
+                            end
+                            BigDebuffs.db.profile.raidFrames.anchor = value
+                        end,
                         order = 11,
                     },
                     scale = {
@@ -549,7 +568,52 @@ function BigDebuffs:SetupOptions()
                                 max = 40,
                                 step = 5,
                                 order = 2
-                            }
+                            },
+                            redirectDebuffsToAddon = {
+                                type = "select",
+                                width = "normal",
+                                name = "Redirect Debuffs To",
+                                desc = function()
+                                    local description = "Select the Addon frames to which debuffs should be redirected. This setting will redirect debuffs to the chosen addon frames instead of the default Blizzard frames."
+                                    local extra = "\n\n|cffffd700Note:|r This feature will only work when you are in a group.\n"
+
+                                    if redirectDebuffsToAddon and redirectDebuffsToAddon ~= "Blizzard" then
+                                        description = description .. "\n\n|cffffd700Note:|r When redirecting debuffs to non-Blizzard frames (currently set to " .. redirectDebuffsToAddon .. "), the 'INNER' anchor option is not available."
+                                    else
+                                        description = description .. "\n\n|cffffd700Note:|r The 'INNER' anchor option is only available when using Blizzard frames."
+                                    end
+                                    return description .. extra
+                                end,
+                                order = 3,
+                                values = function()
+                                    local options = {
+                                        ["Blizzard"] = "Blizzard Frames",
+                                    }
+                                    if IsAddOnLoaded("Cell") then
+                                        options["Cell"] = "Cell Frames"
+                                    end
+                                    return options
+                                end,
+                                get = function(info)
+                                    return BigDebuffs.db.profile.raidFrames.redirectDebuffsToAddon
+                                end,
+                                set = function(info, value)
+                                    BigDebuffs.db.profile.raidFrames.redirectDebuffsToAddon = value
+                                    BigDebuffs:Refresh()
+                                    ReloadUI()
+                                end,
+                                hidden = function()
+                                    for addonName, _ in pairs({
+                                        ["Blizzard"] = "Blizzard Frames",
+                                        ["Cell"] = "Cell Frames",
+                                    }) do
+                                        if IsAddOnLoaded(addonName) then
+                                            return false
+                                        end
+                                    end
+                                    return true
+                                end,
+                            },
                         }
                     }
 
