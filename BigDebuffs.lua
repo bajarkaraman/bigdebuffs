@@ -1314,7 +1314,6 @@ function BigDebuffs:UNIT_AURA_ALL_UNITS()
     end
 end
 
-
 BigDebuffs.AttachedFrames = {}
 
 local INCREASED_MAX_BUFFS = 6
@@ -1341,7 +1340,8 @@ function BigDebuffs:AddBigDebuffs(frame)
     local maxBuffs = self.db.profile.raidFrames.increaseBuffs and INCREASED_MAX_BUFFS or frame.maxBuffs
     for i = 1, maxBuffs do
         if i > frame.maxBuffs then
-            local buffFrame = _G[buffPrefix .. i] or CreateFrame("Button", buffPrefix .. i, frame, "CompactBuffTemplate")
+            local buffFrame = _G[buffPrefix .. i] or
+                CreateFrame("Button", buffPrefix .. i, frame, "CompactBuffTemplate")
             buffFrame:ClearAllPoints()
             if math.fmod(i - 1, 3) == 0 then
                 buffFrame:SetPoint("BOTTOMRIGHT", _G[buffPrefix .. i - 3], "TOPRIGHT")
