@@ -61,6 +61,7 @@ addon.Spells = {
     [28730] = { type = CROWD_CONTROL, }, -- Arcane Torrent (Mana)
     [25046] = { type = CROWD_CONTROL, }, -- Arcane Torrent (Energy)
     [50613] = { type = CROWD_CONTROL, }, -- Arcane Torrent (Runic Power)
+    [58984] = { type = BUFF_DEFENSIVE }, -- Shadowmeld
 
     -- Other
 
@@ -131,7 +132,7 @@ addon.Spells = {
 
     [45524] = { type = ROOT }, -- Chains of Ice
     [47476] = { type = CROWD_CONTROL, },  -- Strangulate
-    [47481] = { type = CROWD_CONTROL, },  -- Gnaw
+    [91800] = { type = CROWD_CONTROL, },  -- Gnaw
     [47484] = { type = BUFF_DEFENSIVE, }, -- Huddle (Ghoul)
     [47528] = { type = INTERRUPT, duration = 4, },  -- Mind Freeze
     [48707] = { type = IMMUNITY_SPELL, },  -- Anti-Magic Shell
@@ -235,7 +236,7 @@ addon.Spells = {
     [31821] = { type = BUFF_DEFENSIVE, },  -- Aura Mastery
     [54428] = { type = BUFF_OTHER, }, -- Divine Plea
     [59578] = { type = BUFF_OTHER, }, -- The Art of War
-    [63529] = { type = CROWD_CONTROL, }, -- Silenced - Shield of the Templar
+    [31935] = { type = CROWD_CONTROL, }, -- Silenced - Avenger's Shield
     [64205] = { type = BUFF_DEFENSIVE, }, -- Divine Sacrifice
 
     [1022] = { type = IMMUNITY },-- Blessing of Protection
