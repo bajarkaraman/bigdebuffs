@@ -7,6 +7,29 @@ local LibSharedMedia = LibStub("LibSharedMedia-3.0")
 local LibClassicDurations = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC and LibStub("LibClassicDurations")
 if LibClassicDurations then LibClassicDurations:Register(addonName) end
 
+-- RedirectManager implementation
+addon.RedirectManager = {}
+local redirectConfigs = {}
+
+function addon.RedirectManager:RegisterRedirectAddon(addonName, config)
+    redirectConfigs[addonName] = config
+end
+
+function addon.RedirectManager:GetRedirectFrame(frame, redirectAddonName)
+    if redirectConfigs[redirectAddonName] then
+        return redirectConfigs[redirectAddonName].GetRedirectFrame(frame)
+    end
+    return nil
+end
+
+function addon.RedirectManager:InitializeRedirectAddons()
+    for addonName, config in pairs(redirectConfigs) do
+        if _G[addonName] and config.Init then
+            config.Init()
+        end
+    end
+end
+
 -- Adding in Masque support, preparing groups if it is available
 local Masque = LibStub("Masque", true)
 if Masque ~= nil then
@@ -359,6 +382,7 @@ else
 end
 
 BigDebuffs.PriorityDebuffs = addon.PriorityDebuffs
+local CompactRaidFrameRedirectConfig = {}
 
 -- Store interrupt spellId and start time
 BigDebuffs.units = {}
@@ -514,55 +538,6 @@ local GetAnchor = {
     end,
 }
 
--- This config is used to redirect the default Blizzard CompactRaidFrame to a custom frame
-local CompactRaidFrameRedirectConfig = {
-    Cell = {
-        GetRedirectFrame = function(targetFrame)
-            local partyHeader = _G["CellPartyFrameHeader"]
-            local raidHeader = _G["CellRaidFrameHeader0"]
-            local soloFrame = _G["CellSoloFramePlayer"]
-            local groupCount = GetNumGroupMembers()
-
-            if soloFrame and soloFrame:IsVisible() then
-                -- We're solo
-                return _G["CellSoloFramePlayer"]
-            end
-
-            print("raidHeader", raidHeader, raidHeader:IsVisible())
-
-            if raidHeader and raidHeader:IsVisible() then
-                -- We're in a raid
-                for i = 1, groupCount do
-                    local frame = _G["CellRaidFrameHeader0UnitButton" .. i]
-                    if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
-                        return frame
-                    else
-                        print(_G["CellRaidFrameHeader1UnitButton" .. i], "CellRaidFrameHeader1UnitButton" .. i)
-                        print(frame.unit, targetFrame.unit, "raid")
-                    end
-                end
-            end
-
-            print("partyHeader", partyHeader, partyHeader:IsVisible())
-
-            if partyHeader and partyHeader:IsVisible() then
-                -- We're in a party
-                for i = 1, groupCount do
-                    local frame = _G["CellPartyFrameHeaderUnitButton" .. i]
-                    if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
-                        return frame
-                    else
-                        print(frame.unit, targetFrame.unit, "party")
-                    end
-                end
-            end
-
-
-
-            return nil
-        end
-    }
-}
 
 local GetNameplateAnchor = {
     ElvUINameplates = function(frame)
@@ -913,6 +888,7 @@ function BigDebuffs:OnInitialize()
     self.UnitFrames = {}
     self.Nameplates = {}
     self:SetupOptions()
+    addon.RedirectManager:InitializeRedirectAddons()
 end
 
 local function HideBigDebuffs(frame)
@@ -1196,7 +1172,6 @@ function BigDebuffs:OnEnable()
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
     self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
-    self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
     self:RegisterEvent("NAME_PLATE_UNIT_ADDED")
     self:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
@@ -1235,10 +1210,6 @@ function BigDebuffs:PLAYER_ENTERING_WORLD()
     end
 end
 
-function BigDebuffs:GROUP_ROSTER_UPDATE()
-    print("REFRESHING")
-    BigDebuffs:Refresh()  -- Ensure all frames are correctly updated
-end
 
 local function UnitBuffByName(unit, name)
     for i = 1, 40 do
@@ -1338,6 +1309,7 @@ function BigDebuffs:UNIT_AURA_ALL_UNITS()
     end
 end
 
+
 BigDebuffs.AttachedFrames = {}
 
 local INCREASED_MAX_BUFFS = 6
@@ -1350,17 +1322,7 @@ function BigDebuffs:AddBigDebuffs(frame)
     local redirectToFrame = nil
 
     if redirectDebuffsToAddon and frameName:match("^Compact") then
-        for redirectAddon, config in pairs(CompactRaidFrameRedirectConfig) do
-            if redirectAddon == redirectDebuffsToAddon then
-                redirectToFrame = config.GetRedirectFrame(frame)
-                if redirectToFrame then
-                    print("Redirecting", frame:GetName(), "to", redirectToFrame:GetName())
-                else
-                    print("Redirecting", frame:GetName(), "to", frame.unit, "failed")
-                    return
-                end
-            end
-        end
+        redirectToFrame = addon.RedirectManager:GetRedirectFrame(frame, redirectDebuffsToAddon)
     end
 
     -- Increase max buffs if needed
@@ -1389,7 +1351,6 @@ function BigDebuffs:AddBigDebuffs(frame)
         big:ClearAllPoints()
 
         if redirectToFrame then
-            self.AttachedFrames[frame.displayedUnit] = redirectToFrame
             redirectToFrame.BigDebuffs = frame.BigDebuffs
             big:SetParent(redirectToFrame)
         end
@@ -1439,8 +1400,6 @@ function BigDebuffs:AddBigDebuffs(frame)
     return true
 end
 
-local pending = {}
-
 hooksecurefunc("CompactUnitFrame_UpdateAll", function(frame)
 	if not BigDebuffs.db.profile then return end
 	if not BigDebuffs.db.profile.raidFrames then return end
@@ -1464,7 +1423,6 @@ if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
 end
 
 function BigDebuffs:PLAYER_REGEN_ENABLED()
-    self:Refresh()
     for frame, _ in pairs(pending) do
         BigDebuffs:AddBigDebuffs(frame)
         pending[frame] = nil
@@ -2517,3 +2475,5 @@ SlashCmdList.BigDebuffs = function(msg)
         InterfaceOptionsFrame_OpenToCategory(addonName)
     end
 end
+
+addon.RedirectManager:InitializeRedirectAddons()
