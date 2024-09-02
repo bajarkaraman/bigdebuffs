@@ -1,77 +1,53 @@
+---@diagnostic disable: undefined-global
 local _, addon = ...
 
-local lastUpdate = 0
-local debounceTime = 2
-
-local function UpdateGroupHeader(header)
-    if header ~= CellPartyFrameHeader and header ~= CellRaidFrameHeader0 then
-        return
-    end
-
-    local currentTime = GetTime()
-
-    if currentTime - lastUpdate < debounceTime then
-        return
-    end
-
-    for frame, _ in pairs(BigDebuffs.frames) do
-        if frame then CompactUnitFrame_UpdateAuras(frame) end
-        if frame and frame.BigDebuffs then BigDebuffs:AddBigDebuffs(frame) end
-    end
-
-    lastUpdate = currentTime
+local function Update()
+	BigDebuffs:Refresh()
 end
 
 local function GetRedirectFrame(targetFrame)
-    local partyHeader = _G["CellPartyFrameHeader"]
-    local raidHeader = _G["CellRaidFrameHeader0"]
-    local soloFrame = _G["CellSoloFramePlayer"]
-    local groupCount = GetNumGroupMembers()
+	for i = 1, MEMBERS_PER_RAID_GROUP do
+		local frame = _G["CellPartyFrameHeaderUnitButton" .. i]
 
-    if soloFrame and soloFrame:IsVisible() then
-        -- We're solo
-        return _G["CellSoloFramePlayer"]
-    end
+		if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
+			return frame
+		end
+	end
 
-    if raidHeader and raidHeader:IsVisible() then
-        -- We're in a raid
-        for i = 1, groupCount do
-            local frame = _G["CellRaidFrameHeader0UnitButton" .. i]
-            if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
-                return frame
-            end
-        end
-    end
+	for group = 1, MAX_RAID_MEMBERS / MEMBERS_PER_RAID_GROUP do
+		for member = 1, MEMBERS_PER_RAID_GROUP do
+			local frame = _G["CellRaidFrameHeader" .. group .. "UnitButton" .. member]
 
-    if partyHeader and partyHeader:IsVisible() then
-        -- We're in a party
-        for i = 1, groupCount do
-            local frame = _G["CellPartyFrameHeaderUnitButton" .. i]
-            if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
-                return frame
-            end
-        end
-    end
+			if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
+				return frame
+			end
+		end
+	end
 
-    return nil
+	if not UnitIsUnit("player", targetFrame.unit) then
+		return nil
+	end
+
+	return CellSoloFramePlayer
 end
 
 local function Init()
-    if not Cell then return end
+	if C_AddOns.GetAddOnEnableState("Cell", nil) == 0 then
+		return
+	end
 
-    hooksecurefunc("SecureGroupHeader_Update", function(header)
-        UpdateGroupHeader(header)
-    end)
+	local eventFrame = CreateFrame("Frame")
+	eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+	eventFrame:HookScript("OnEvent", function()
+		RunNextFrame(Update)
+	end)
 
-    if BigDebuffs and BigDebuffs.CompactRaidFrameRedirectConfig then
-        BigDebuffs.CompactRaidFrameRedirectConfig.Cell = {
-            GetRedirectFrame = GetRedirectFrame
-        }
-    end
+	addon.CompactRaidFrameRedirectConfig.Cell = {
+		GetRedirectFrame = GetRedirectFrame,
+	}
 end
 
-addon.Init = Init
 addon.RedirectManager:RegisterRedirectAddon("Cell", {
-    GetRedirectFrame = GetRedirectFrame,
-    Init = Init
+	GetRedirectFrame = GetRedirectFrame,
+	Init = Init,
 })
