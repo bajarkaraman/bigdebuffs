@@ -7,29 +7,6 @@ local LibSharedMedia = LibStub("LibSharedMedia-3.0")
 local LibClassicDurations = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC and LibStub("LibClassicDurations")
 if LibClassicDurations then LibClassicDurations:Register(addonName) end
 
--- RedirectManager implementation
-addon.RedirectManager = {}
-local redirectConfigs = {}
-
-function addon.RedirectManager:RegisterRedirectAddon(addonName, config)
-    redirectConfigs[addonName] = config
-end
-
-function addon.RedirectManager:GetRedirectFrame(frame, redirectAddonName)
-    if redirectConfigs[redirectAddonName] then
-        return redirectConfigs[redirectAddonName].GetRedirectFrame(frame)
-    end
-    return nil
-end
-
-function addon.RedirectManager:InitializeRedirectAddons()
-    for addonName, config in pairs(redirectConfigs) do
-        if _G[addonName] and config.Init then
-            config.Init()
-        end
-    end
-end
-
 -- Adding in Masque support, preparing groups if it is available
 local Masque = LibStub("Masque", true)
 if Masque ~= nil then
@@ -819,6 +796,32 @@ local anchors = {
         },
     },
 }
+
+addon.RedirectManager = {}
+addon.CompactRaidFrameRedirectConfig = {}
+
+function addon.RedirectManager:RegisterRedirectAddon(name, config)
+    addon.CompactRaidFrameRedirectConfig[name] = config
+end
+
+function addon.RedirectManager:GetRedirectFrame(frame, redirectAddonName)
+    if addon.CompactRaidFrameRedirectConfig[redirectAddonName] then
+        return addon.CompactRaidFrameRedirectConfig[redirectAddonName].GetRedirectFrame(frame)
+    end
+
+    return nil
+end
+
+function addon.RedirectManager:InitializeRedirectAddons()
+    print("test", addon.CompactRaidFrameRedirectConfig.Cell)
+
+    for _, value in pairs(addon.CompactRaidFrameRedirectConfig) do
+        if value.Init then
+            print("Calling init")
+            value.Init()
+        end
+    end
+end
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     anchors.Blizzard.units = {
@@ -2492,4 +2495,3 @@ SlashCmdList.BigDebuffs = function(msg)
     end
 end
 
-addon.RedirectManager:InitializeRedirectAddons()

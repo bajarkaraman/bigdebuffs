@@ -30,3 +30,4 @@ BigDebuffs.xml
 BigDebuffs_Mainline.lua
 BigDebuffs.lua
 Options.lua
+RedirectAddons\Cell.lua
