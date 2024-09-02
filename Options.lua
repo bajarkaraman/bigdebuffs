@@ -4,6 +4,7 @@ local LibSharedMedia = LibStub("LibSharedMedia-3.0")
 local GetSpellTexture = C_Spell and C_Spell.GetSpellTexture or GetSpellTexture
 local GetSpellInfo = C_Spell and C_Spell.GetSpellInfo or GetSpellInfo
 local GetAddOnMetadata = C_AddOns.GetAddOnMetadata
+local IsAddOnLoaded = C_AddOns.IsAddOnLoaded or IsAddOnLoaded
 
 local function GetSpellName(id)
     if C_Spell and C_Spell.GetSpellName then
