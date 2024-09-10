@@ -813,11 +813,9 @@ function addon.RedirectManager:GetRedirectFrame(frame, redirectAddonName)
 end
 
 function addon.RedirectManager:InitializeRedirectAddons()
-    print("test", addon.CompactRaidFrameRedirectConfig.Cell)
 
     for _, value in pairs(addon.CompactRaidFrameRedirectConfig) do
         if value.Init then
-            print("Calling init")
             value.Init()
         end
     end

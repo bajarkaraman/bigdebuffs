@@ -29,6 +29,5 @@ BigDebuffs.xml
 BigDebuffs_Cata.lua
 BigDebuffs.lua
 Options.lua
-RedirectAddons\RedirectManager.lua
 RedirectAddons\Cell.lua
 
