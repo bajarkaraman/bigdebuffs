@@ -6,29 +6,37 @@ local function Update()
 end
 
 local function GetRedirectFrame(targetFrame)
-	for i = 1, MEMBERS_PER_RAID_GROUP do
-		local frame = _G["CellPartyFrameHeaderUnitButton" .. i]
+    local partyHeader = _G["CellPartyFrameHeader"]
+    local raidHeader = _G["CellRaidFrameHeader0"]
+    local soloFrame = _G["CellSoloFramePlayer"]
+    local groupCount = GetNumGroupMembers()
 
-		if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
-			return frame
-		end
-	end
+    if soloFrame and soloFrame:IsVisible() then
+        -- We're solo
+        return _G["CellSoloFramePlayer"]
+    end
 
-	for group = 1, MAX_RAID_MEMBERS / MEMBERS_PER_RAID_GROUP do
-		for member = 1, MEMBERS_PER_RAID_GROUP do
-			local frame = _G["CellRaidFrameHeader" .. group .. "UnitButton" .. member]
+    if raidHeader and raidHeader:IsVisible() then
+        -- We're in a raid
+        for i = 1, groupCount do
+            local frame = _G["CellRaidFrameHeader0UnitButton" .. i]
+            if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
+                return frame
+            end
+        end
+    end
 
-			if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
-				return frame
-			end
-		end
-	end
+    if partyHeader and partyHeader:IsVisible() then
+        -- We're in a party
+        for i = 1, groupCount do
+            local frame = _G["CellPartyFrameHeaderUnitButton" .. i]
+            if frame and frame:IsVisible() and UnitIsUnit(frame.unit, targetFrame.unit) then
+                return frame
+            end
+        end
+    end
 
-	if not UnitIsUnit("player", targetFrame.unit) then
-		return nil
-	end
-
-	return CellSoloFramePlayer
+    return nil
 end
 
 local function Init()
