@@ -15,6 +15,7 @@ if Masque ~= nil then
     BigDebuffs.MasqueGroup.NamePlate = Masque:Group("BigDebuffs", "NamePlate")
 end
 
+local LoadAddOn = C_AddOns.LoadAddOn
 local UnitDebuff, UnitBuff = C_UnitAuras.GetDebuffDataByIndex, C_UnitAuras.GetBuffDataByIndex
 local GetSpellTexture = C_Spell and C_Spell.GetSpellTexture or GetSpellTexture
 local GetSpellInfo = C_Spell and C_Spell.GetSpellInfo or GetSpellInfo
@@ -399,7 +400,17 @@ local GetAnchor = {
             end
         end
 
-        if unit and (unit:match("party") or unit:match("player")) then
+        if unit and unit:match("player") then
+            local unitGUID = UnitGUID(unit)
+            local elvUIFrame = _G["ElvUF_Player"]
+            if elvUIFrame and elvUIFrame:IsVisible() and elvUIFrame.unit then
+                if unitGUID == UnitGUID(elvUIFrame.unit) then
+                    return elvUIFrame
+                end
+            end
+        end
+
+        if unit and unit:match("party") then
             local unitGUID = UnitGUID(unit)
             for i = 1, 5, 1 do
                 local elvUIFrame = _G["ElvUF_PartyGroup1UnitButton" .. i]
@@ -645,26 +656,6 @@ local nameplatesAnchors = {
 }
 
 local anchors = {
-    ["GladiusExParty"] = {
-        noPortait = true,
-        units = {
-            party1 = "GladiusExButtonFrameparty1",
-            party2 = "GladiusExButtonFrameparty2",
-            party3 = "GladiusExButtonFrameparty3",
-            party4 = "GladiusExButtonFrameparty4"
-        }
-    },
-    ["GladiusExArena"] = {
-        noPortait = true,
-        alignLeft = true,
-        units = {
-            arena1 = "GladiusExButtonFramearena1",
-            arena2 = "GladiusExButtonFramearena2",
-            arena3 = "GladiusExButtonFramearena3",
-            arena4 = "GladiusExButtonFramearena4",
-            arena5 = "GladiusExButtonFramearena5",
-        }
-    },
     ["ElvUI"] = {
         func = GetAnchor.ElvUIFrames,
         noPortait = true,
@@ -2234,12 +2225,13 @@ function BigDebuffs:UNIT_AURA(unit)
                     frame.mask:SetAllPoints(frame.icon)
                     frame.mask:SetTexture("Interface/CHARACTERFRAME/TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
                     if frame.unit == "player" then
-
-                        local container = PlayerFrame.PlayerFrameContainer
-                        -- set the frame.mask atlas only if the new frame textures are actually present (4642466)
-                        if (container.AlternatePowerFrameTexture and container.AlternatePowerFrameTexture:GetTexture() == 4642466)
-                            or (container.FrameTexture and container.FrameTexture:GetTexture() == 4642466) then
-                            frame.mask:SetAtlas("UI-HUD-UnitFrame-Player-Portrait-Mask", _G.TextureKitConstants.UseAtlasSize)
+                        if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+                            local container = PlayerFrame.PlayerFrameContainer
+                            -- set the frame.mask atlas only if the new frame textures are actually present (4642466)
+                            if (container.AlternatePowerFrameTexture and container.AlternatePowerFrameTexture:GetTexture() == 4642466)
+                                or (container.FrameTexture and container.FrameTexture:GetTexture() == 4642466) then
+                                frame.mask:SetAtlas("UI-HUD-UnitFrame-Player-Portrait-Mask", _G.TextureKitConstants.UseAtlasSize)
+                            end
                         end
                     end
                     frame.icon:AddMaskTexture(frame.mask)
