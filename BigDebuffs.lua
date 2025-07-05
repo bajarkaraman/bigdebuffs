@@ -1979,7 +1979,11 @@ if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
         for i = 1, #debuffs do -- math.min maybe?
             if index <= self.db.profile.raidFrames.maxDebuffs then
                 if not frame.BigDebuffs[index] then break end
-                local frameHeight = frame:GetHeight()
+                local redirectDebuffsToAddon = self.db.profile.raidFrames.redirectDebuffsToAddon
+                local redirectFrame = addon.RedirectManager:GetRedirectFrame(frame, redirectDebuffsToAddon)
+
+                local frameToUse = redirectFrame or frame
+                local frameHeight = frameToUse:GetHeight()
                 frame.BigDebuffs[index].baseSize = frameHeight * debuffs[i][2] * 0.01
                 local debuffFrame = frame.BigDebuffs[index];
                 debuffFrame.spellId = debuffs[i][1].spellId;

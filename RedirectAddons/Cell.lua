@@ -46,6 +46,7 @@ local function Init()
 
 	local eventFrame = CreateFrame("Frame")
 	eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+    eventFrame:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS")
 	eventFrame:HookScript("OnEvent", function()
 		RunNextFrame(Update)
 	end)
