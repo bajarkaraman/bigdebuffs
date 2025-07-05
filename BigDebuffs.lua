@@ -2096,7 +2096,16 @@ else
             for i = 1, #debuffs do
                 if index <= self.db.profile.raidFrames.maxDebuffs or debuffs[i][1] == warning then
                     if not frame.BigDebuffs[index] then break end
-                    frame.BigDebuffs[index].baseSize = frame:GetHeight() * debuffs[i][2] * 0.01
+                    local debuffFrame = frame.BigDebuffs[index]
+                    local parentFrame = debuffFrame:GetParent()
+                    local baseHeight
+                    if self.db.profile.raidFrames.redirectDebuffsToAddon and parentFrame and parentFrame ~= frame then
+                        baseHeight = parentFrame:GetHeight()
+                    else
+                        baseHeight = frame:GetHeight()
+                    end
+
+                    debuffFrame.baseSize = baseHeight * debuffs[i][2] * 0.01
                     frame.BigDebuffs[index].spellId = debuffs[i][5];
                     CompactUnitFrame_UtilSetDebuff(frame.BigDebuffs[index],
                         frame.displayedUnit, debuffs[i][1], nil, false, false)
